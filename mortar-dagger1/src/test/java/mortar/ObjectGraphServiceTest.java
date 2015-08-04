@@ -492,74 +492,10 @@ import static org.mockito.MockitoAnnotations.initMocks;
     assertThat(caught).isNotNull();
   }
 
-  @Test(expected = IllegalStateException.class) public void cannotRegisterOnDestroyed() {
-    MortarScope scope = createRootScope(create(new Able()));
-    scope.destroy();
-    scope.register(scoped);
-  }
-
-  @Test(expected = IllegalStateException.class) public void cannotFindChildFromDestroyed() {
-    MortarScope scope = createRootScope(create(new Able()));
-    scope.destroy();
-    scope.findChild("foo");
-  }
-
   @Test(expected = IllegalStateException.class) public void cannotRequireChildFromDestroyed() {
     MortarScope scope = createRootScope(create(new Able()));
     scope.destroy();
     requireChild(scope, new AbleBlueprint());
-  }
-
-  @Test public void destroyIsIdempotent() {
-    MortarScope root = createRootScope(create(new Able()));
-    MortarScope child = requireChild(root, new NoModules());
-
-    final AtomicInteger destroys = new AtomicInteger(0);
-    child.register(new Scoped() {
-      @Override public void onEnterScope(MortarScope scope) {
-      }
-
-      @Override public void onExitScope() {
-        destroys.addAndGet(1);
-      }
-    });
-
-    child.destroy();
-    assertThat(destroys.get()).isEqualTo(1);
-
-    child.destroy();
-    assertThat(destroys.get()).isEqualTo(1);
-  }
-
-  @Test public void rootDestroyIsIdempotent() {
-    MortarScope scope = createRootScope(create(new Able()));
-
-    final AtomicInteger destroys = new AtomicInteger(0);
-    scope.register(new Scoped() {
-      @Override public void onEnterScope(MortarScope scope) {
-      }
-
-      @Override public void onExitScope() {
-        destroys.addAndGet(1);
-      }
-    });
-
-    scope.destroy();
-    assertThat(destroys.get()).isEqualTo(1);
-
-    scope.destroy();
-    assertThat(destroys.get()).isEqualTo(1);
-  }
-
-  @Test public void isDestroyedStartsFalse() {
-    MortarScope root = createRootScope(create(new Able()));
-    assertThat(root.isDestroyed()).isFalse();
-  }
-
-  @Test public void isDestroyedGetsSet() {
-    MortarScope root = createRootScope(create(new Able()));
-    root.destroy();
-    assertThat(root.isDestroyed()).isTrue();
   }
 
   private static MortarScope createRootScope(ObjectGraph objectGraph) {
@@ -567,7 +503,6 @@ import static org.mockito.MockitoAnnotations.initMocks;
         .withService(ObjectGraphService.SERVICE_NAME, objectGraph)
         .build("Root");
   }
-
 
   private static Context mockContext(MortarScope root) {
     final MortarScope scope = root;

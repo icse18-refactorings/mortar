@@ -2,8 +2,10 @@ package mortar;
 
 import android.content.Context;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -13,11 +15,15 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.initMocks;
 
 public class MortarScopeTest {
+  @Mock Scoped scoped;
+
   MortarScope.Builder scopeBuilder;
 
   @Before public void setUp() {
+    initMocks(this);
     scopeBuilder = MortarScope.buildRootScope();
   }
 
@@ -155,6 +161,70 @@ public class MortarScopeTest {
     Context context = mockContext(root);
     root.destroy();
     assertThat(MortarScope.getScope(context)).isSameAs(root);
+  }
+
+  @Test(expected = IllegalStateException.class) public void cannotRegisterOnDestroyed() {
+    MortarScope scope = scopeBuilder.build("root");
+    scope.destroy();
+    scope.register(scoped);
+  }
+
+  @Test(expected = IllegalStateException.class) public void cannotFindChildFromDestroyed() {
+    MortarScope scope = scopeBuilder.build("root");
+    scope.destroy();
+    scope.findChild("foo");
+  }
+
+  @Test public void destroyIsIdempotent() {
+    MortarScope root = scopeBuilder.build("root");
+    MortarScope child = root.buildChild().build("ChildOne");
+
+    final AtomicInteger destroys = new AtomicInteger(0);
+    child.register(new Scoped() {
+      @Override public void onEnterScope(MortarScope scope) {
+      }
+
+      @Override public void onExitScope() {
+        destroys.addAndGet(1);
+      }
+    });
+
+    child.destroy();
+    assertThat(destroys.get()).isEqualTo(1);
+
+    child.destroy();
+    assertThat(destroys.get()).isEqualTo(1);
+  }
+
+  @Test public void rootDestroyIsIdempotent() {
+    MortarScope scope = scopeBuilder.build("root");
+
+    final AtomicInteger destroys = new AtomicInteger(0);
+    scope.register(new Scoped() {
+      @Override public void onEnterScope(MortarScope scope) {
+      }
+
+      @Override public void onExitScope() {
+        destroys.addAndGet(1);
+      }
+    });
+
+    scope.destroy();
+    assertThat(destroys.get()).isEqualTo(1);
+
+    scope.destroy();
+    assertThat(destroys.get()).isEqualTo(1);
+  }
+
+  @Test public void isDestroyedStartsFalse() {
+    MortarScope root = scopeBuilder.build("root");
+    assertThat(root.isDestroyed()).isFalse();
+  }
+
+  @Test public void isDestroyedGetsSet() {
+    MortarScope root = scopeBuilder.build("root");
+    root.destroy();
+    assertThat(root.isDestroyed()).isTrue();
   }
 
   private Context mockContext(MortarScope root) {

@@ -16,7 +16,7 @@ public class BundleServiceRunner implements Scoped {
   public static final String SERVICE_NAME = BundleServiceRunner.class.getName();
 
   public static BundleServiceRunner getBundleServiceRunner(Context context) {
-    return (BundleServiceRunner) context.getSystemService(SERVICE_NAME);
+    return getBundleServiceRunner(MortarScope.getScope(context));
   }
 
   public static BundleServiceRunner getBundleServiceRunner(MortarScope scope) {

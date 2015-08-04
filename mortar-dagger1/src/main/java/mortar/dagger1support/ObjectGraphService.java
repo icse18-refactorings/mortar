@@ -27,7 +27,7 @@ public class ObjectGraphService {
   }
 
   public static ObjectGraph getObjectGraph(Context context) {
-    return (ObjectGraph) getScope(context).getService(ObjectGraphService.SERVICE_NAME);
+    return getObjectGraph(getScope(context));
   }
 
   public static ObjectGraph getObjectGraph(MortarScope scope) {

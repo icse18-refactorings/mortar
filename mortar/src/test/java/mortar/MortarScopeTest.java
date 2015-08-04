@@ -1,12 +1,18 @@
 package mortar;
 
+import android.content.Context;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import static mortar.MortarScope.DIVIDER;
 import static org.fest.assertions.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class MortarScopeTest {
   MortarScope.Builder scopeBuilder;
@@ -136,5 +142,30 @@ public class MortarScopeTest {
       }
     });
     rootScope.destroy();
+  }
+
+  @Test public void getScope() {
+    MortarScope root = scopeBuilder.build("root");
+    Context context = mockContext(root);
+    assertThat(MortarScope.getScope(context)).isSameAs(root);
+  }
+
+  @Test public void getScopeReturnsDeadScope() {
+    MortarScope root = scopeBuilder.build("root");
+    Context context = mockContext(root);
+    root.destroy();
+    assertThat(MortarScope.getScope(context)).isSameAs(root);
+  }
+
+  private Context mockContext(MortarScope root) {
+    final MortarScope scope = root;
+    Context appContext = mock(Context.class);
+    when(appContext.getSystemService(anyString())).thenAnswer(new Answer<Object>() {
+      @Override public Object answer(InvocationOnMock invocation) throws Throwable {
+        String name = (String) invocation.getArguments()[0];
+        return scope.hasService(name) ? scope.getService(name) : null;
+      }
+    });
+    return appContext;
   }
 }

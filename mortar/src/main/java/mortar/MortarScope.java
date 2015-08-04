@@ -28,7 +28,7 @@ import static java.lang.String.format;
 
 public class MortarScope {
   public static final String DIVIDER = ">>>";
-  public static final String SERVICE_NAME = MortarScope.class.getName();
+  static final String MORTAR_SERVICE = MortarScope.class.getName();
 
   /**
    * Retrieves a MortarScope from the given context. If none is found, retrieves a MortarScope from
@@ -38,7 +38,7 @@ public class MortarScope {
    */
   public static MortarScope getScope(Context context) {
     //noinspection ResourceType
-    Object scope = context.getSystemService(SERVICE_NAME);
+    Object scope = context.getSystemService(MORTAR_SERVICE);
     if (scope == null) {
       // Essentially a workaround for the lifecycle interval where an Activity's
       // base context is not yet set to the Application, but the Application
@@ -46,7 +46,7 @@ public class MortarScope {
       // services. Thanks, Android!
 
       //noinspection ResourceType
-      scope = context.getApplicationContext().getSystemService(SERVICE_NAME);
+      scope = context.getApplicationContext().getSystemService(MORTAR_SERVICE);
     }
     return (MortarScope) scope;
   }
@@ -93,10 +93,12 @@ public class MortarScope {
 
   /**
    * Returns true if the service associated with the given name is available &
-   * if the scope is not destroyed
+   * if the scope is not destroyed.
    */
   public boolean hasService(String serviceName) {
-    return !isDestroyed() && findService(serviceName) != null;
+    // Always say yes for requests for the scope itself, even if we're destroyed.
+    // Otherwise things like if (MortarScope.getScope(context).isDestroyed()) are impossible.
+    return serviceName.equals(MORTAR_SERVICE) || !isDestroyed() && findService(serviceName) != null;
   }
 
   /**
@@ -116,8 +118,11 @@ public class MortarScope {
 
   @SuppressWarnings("unchecked") //
   private <T> T findService(String serviceName) {
+    // Always honor requests for the scope itself, even if we're destroyed.
+    // Otherwise things like if (MortarScope.getScope(context).isDestroyed()) are impossible.
+    if (MORTAR_SERVICE.equals(serviceName)) return (T) this;
+
     assertNotDead();
-    if (SERVICE_NAME.equals(serviceName)) return (T) this;
 
     T service = (T) services.get(serviceName);
     if (service != null) return service;
@@ -261,10 +266,9 @@ public class MortarScope {
         throw new NullPointerException("service == null");
       }
       if (existing != null) {
-        throw new IllegalArgumentException(
-            format(
-                "Scope builder already bound \"%s\" to service \"%s\", cannot be rebound to \"%s\"",
-                serviceName, existing.getClass().getName(), service.getClass().getName()));
+        throw new IllegalArgumentException(format(
+            "Scope builder already bound \"%s\" to service \"%s\", cannot be rebound to \"%s\"",
+            serviceName, existing.getClass().getName(), service.getClass().getName()));
       }
       return this;
     }

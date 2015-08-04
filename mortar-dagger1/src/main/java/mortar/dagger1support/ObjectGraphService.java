@@ -7,6 +7,8 @@ import java.util.Collection;
 import mortar.MortarScope;
 import mortar.bundler.BundleServiceRunner;
 
+import static mortar.MortarScope.getScope;
+
 /**
  * Provides utility methods for using Mortar with Dagger 1.
  */
@@ -25,7 +27,7 @@ public class ObjectGraphService {
   }
 
   public static ObjectGraph getObjectGraph(Context context) {
-    return (ObjectGraph) context.getSystemService(ObjectGraphService.SERVICE_NAME);
+    return (ObjectGraph) getScope(context).getService(ObjectGraphService.SERVICE_NAME);
   }
 
   public static ObjectGraph getObjectGraph(MortarScope scope) {

@@ -39,11 +39,13 @@ import static mortar.dagger1support.ObjectGraphService.requireChild;
 import static org.fest.assertions.api.Assertions.assertThat;
 import static org.fest.assertions.api.Assertions.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
-@SuppressWarnings("InnerClassMayBeStatic") public class MortarScopeTest {
+@SuppressWarnings("InnerClassMayBeStatic") public class ObjectGraphServiceTest {
 
   @Mock Context context;
   @Mock Scoped scoped;
@@ -451,7 +453,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
   @Test public void getScope() {
     MortarScope root = createRootScope(create(new Able()));
-    when(context.getSystemService(MortarScope.SERVICE_NAME)).thenReturn(root);
+    when(context.getSystemService(MortarScope.MORTAR_SERVICE)).thenReturn(root);
     assertThat(MortarScope.getScope(context)).isSameAs(root);
   }
 
@@ -470,6 +472,20 @@ import static org.mockito.MockitoAnnotations.initMocks;
     IllegalStateException caught = null;
     try {
       getObjectGraph(scope);
+    } catch (IllegalStateException e) {
+      caught = e;
+    }
+    assertThat(caught).isNotNull();
+  }
+
+  @Test public void cannotGetObjectGraphFromContextOfDestroyed() {
+    MortarScope scope = createRootScope(create(new Able()));
+    Context context = mockContext(scope);
+    scope.destroy();
+
+    IllegalStateException caught = null;
+    try {
+      getObjectGraph(context);
     } catch (IllegalStateException e) {
       caught = e;
     }
@@ -550,5 +566,18 @@ import static org.mockito.MockitoAnnotations.initMocks;
     return MortarScope.buildRootScope()
         .withService(ObjectGraphService.SERVICE_NAME, objectGraph)
         .build("Root");
+  }
+
+
+  private static Context mockContext(MortarScope root) {
+    final MortarScope scope = root;
+    Context appContext = mock(Context.class);
+    when(appContext.getSystemService(anyString())).thenAnswer(new Answer<Object>() {
+      @Override public Object answer(InvocationOnMock invocation) throws Throwable {
+        String name = (String) invocation.getArguments()[0];
+        return scope.hasService(name) ? scope.getService(name) : null;
+      }
+    });
+    return appContext;
   }
 }
